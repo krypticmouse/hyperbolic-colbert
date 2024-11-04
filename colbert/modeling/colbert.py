@@ -1,4 +1,4 @@
-from hypere.losses import hyperbolic_distance
+from hypere.similarity import hyperbolic_distance
 from colbert.infra.config.config import ColBERTConfig
 from colbert.search.strided_tensor import StridedTensor
 from colbert.utils.utils import print_message, flatten

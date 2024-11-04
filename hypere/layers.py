@@ -43,3 +43,22 @@ class PoincareProjection(nn.Module):
         self.model = BertModel.from_pretrained(path)
         self.phi_dir.load_state_dict(torch.load(f"{path}/phi_dir.pth"))
         self.phi_norm.load_state_dict(torch.load(f"{path}/phi_norm.pth"))
+
+
+class HalfSpacePoincareProjection(nn.Module):
+    def __init__(self,) -> None:
+        super().__init__()
+
+    def forward(self, x):
+        norm_squared = torch.sum(x ** 2, dim=-1, keepdim=True)
+
+        # Compute the y-coordinate in the Poincaré half-space
+        y = 2 / (1 - norm_squared)
+
+        # Compute the x-coordinates in the Poincaré half-space
+        x = 2 * x / (1 - norm_squared)
+
+        # Concatenate x and y to form the (n+1)-dimensional embeddings
+        poincare_embeddings = torch.cat((x, y), dim=-1)
+
+        return poincare_embeddings
