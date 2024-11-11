@@ -123,8 +123,6 @@ class ColBERT(BaseColBERT):
         if self.colbert_config.similarity == 'l2':
             assert self.colbert_config.interaction == 'colbert'
             return (-1.0 * ((Q.unsqueeze(2) - D_padded.unsqueeze(1))**2).sum(-1)).max(-1).values.sum(-1)
-        if self.colbert_config.similarity == 'hyperbolic':
-            return hyperbolic_distance(Q, D_padded, max_norm=self.colbert_config.hyperbolic_maxnorm)
         return colbert_score(Q, D_padded, D_mask, config=self.colbert_config)
 
     def mask(self, input_ids, skiplist):
@@ -159,7 +157,6 @@ def colbert_score_reduce(scores_padded, D_mask, config: ColBERTConfig):
 
     return scores.sum(-1)
 
-
 # TODO: Wherever this is called, pass `config=`
 def colbert_score(Q, D_padded, D_mask, config=ColBERTConfig()):
     """
@@ -178,7 +175,10 @@ def colbert_score(Q, D_padded, D_mask, config=ColBERTConfig()):
     assert D_padded.dim() == 3, D_padded.size()
     assert Q.size(0) in [1, D_padded.size(0)]
 
-    scores = D_padded @ Q.to(dtype=D_padded.dtype).permute(0, 2, 1)
+    if config.similarity == "hyperbolic":
+        scores = hyperbolic_distance(Q.to(dtype=D_padded.dtype), D_padded, max_norm=config.hyperbolic_maxnorm)
+    else:
+        scores = D_padded @ Q.to(dtype=D_padded.dtype).permute(0, 2, 1)
 
     return colbert_score_reduce(scores, D_mask, config)
 
@@ -198,7 +198,10 @@ def colbert_score_packed(Q, D_packed, D_lengths, config=ColBERTConfig()):
     assert Q.dim() == 2, Q.size()
     assert D_packed.dim() == 2, D_packed.size()
 
-    scores = D_packed @ Q.to(dtype=D_packed.dtype).T
+    if config.similarity == "hyperbolic":
+        scores = hyperbolic_distance(Q.to(dtype=D_packed.dtype), D_packed, max_norm=config.hyperbolic_maxnorm)
+    else:
+        scores = D_packed @ Q.to(dtype=D_packed.dtype).T
 
     if use_gpu or config.interaction == "flipr":
         scores_padded, scores_mask = StridedTensor(scores, D_lengths, use_gpu=use_gpu).as_padded_tensor()

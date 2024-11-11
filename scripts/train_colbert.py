@@ -4,7 +4,7 @@ from colbert.infra import Run, RunConfig, ColBERTConfig
 from colbert import Trainer
 
 def train(nranks:int):
-    with Run().context(RunConfig(nranks=nranks, root="/future/u/herumbshandilya/home/ColBERT/experiments", experiment="late-interaction-training", name="msmarco-colv2-bert-large.test")):
+    with Run().context(RunConfig(nranks=nranks, root="/future/u/herumbshandilya/home/hyperbolic-colbert/colbert", experiment="hyperbolic-late-interaction-training", name="lr3e-06_warmup20k_maxsteps500k_bert-large-uncased_64")):
         config = ColBERTConfig(
             reranker=False,
             bsize=16,
@@ -21,11 +21,11 @@ def train(nranks:int):
             ignore_scores=True,
             model_type = "encoder-only",
             shuffle_triples = False,
-            amp_dtype="float16",
             checkpoint="bert-large-uncased",
             maxsteps=500001,
-            projection_dim=100,
+            projection_dim=16,
             hyperbolic_maxnorm=None,
+            amp=False,
         )
 
         trainer = Trainer(
@@ -42,12 +42,6 @@ def train(nranks:int):
 if __name__ == '__main__':
     fire.Fire(train)
 
-'''
-CUDA_VISIBLE_DEVICES=0,1,2,3 colbert2.5_training_late_interaction_colv1.py 4 | late_interaction_2way_msmarco_colv1.txt
-
-CUDA_VISIBLE_DEVICES=6,7 python colbert2.5_training_late_interaction_colv1.py 2 | tee late_interaction_2way_msmarco_colv1_mosaic_bert_2048.txt
-
-CUDA_VISIBLE_DEVICES=4,5,6,7 python colbert2.5_training_late_interaction_colv1.py 4 | tee late_interaction_64way_msmarco_colv2_bert_large_lowlr.txt
-
-CUDA_VISIBLE_DEVICES=0,1,2,3,4,5,6,7 python colbert2.5_training_late_interaction_colv1.py 8 | tee late_interaction_64way_msmarco_colv2_nomic_bert_2048.txt
-'''
+"""
+CUDA_VISIBLE_DEVICES=0,1,2,3 train_colbert.py 4 | tee hyperbolic_bs16_lr3e-06_warmup20k_maxsteps500k_bert-large-uncased_64.log
+"""
