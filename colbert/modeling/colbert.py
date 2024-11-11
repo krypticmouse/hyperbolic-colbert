@@ -67,7 +67,10 @@ class ColBERT(BaseColBERT):
 
     def compute_ib_loss(self, Q, D, D_mask):
         # TODO: Organize the code below! Quite messy.
-        scores = (D.unsqueeze(0) @ Q.permute(0, 2, 1).unsqueeze(1)).flatten(0, 1)  # query-major unsqueeze
+        if self.colbert_config.similarity == 'hyperbolic':
+            return hyperbolic_distance(Q.unsqueeze(1), D.unsqueeze(0), max_norm=self.colbert_config.hyperbolic_maxnorm).flatten(0, 1)
+        else:
+            scores = (D.unsqueeze(0) @ Q.permute(0, 2, 1).unsqueeze(1)).flatten(0, 1)  # query-major unsqueeze
 
         scores = colbert_score_reduce(scores, D_mask.repeat(Q.size(0), 1, 1), self.colbert_config)
 
