@@ -38,9 +38,9 @@ def train(config: ColBERTConfig, triples, queries=None, collection=None):
 
     if collection is not None:
         if config.reranker:
-            reader = RerankBatcher(config, triples, queries, collection, (0 if config.rank == -1 else config.rank), config.nranks)
+            reader = RerankBatcher(config, triples, queries, collection, (0 if config.rank == -1 else config.rank), config.nranks, shuffle_triples=config.shuffle_triples)
         else:
-            reader = LazyBatcher(config, triples, queries, collection, (0 if config.rank == -1 else config.rank), config.nranks)
+            reader = LazyBatcher(config, triples, queries, collection, (0 if config.rank == -1 else config.rank), config.nranks, shuffle_triples=config.shuffle_triples)
     else:
         raise NotImplementedError()
 
@@ -56,7 +56,7 @@ def train(config: ColBERTConfig, triples, queries=None, collection=None):
                                                         output_device=config.rank,
                                                         find_unused_parameters=True)
 
-    optimizer = RiemannianSGD(filter(lambda p: p.requires_grad, colbert.parameters()), lr=config.lr, eps=1e-8)
+    optimizer = RiemannianSGD(filter(lambda p: p.requires_grad, colbert.parameters()), lr=config.lr, weight_decay=1e-8)
     optimizer.zero_grad()
 
     scheduler = None

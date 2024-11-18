@@ -1,6 +1,9 @@
 from colbert.infra.run import Run
 import os
 import ujson
+import random
+from tqdm import tqdm, trange
+from random import Random
 
 from colbert.utils.utils import print_message
 from colbert.infra.provenance import Provenance
@@ -8,10 +11,11 @@ from utility.utils.save_metadata import get_metadata_only
 
 
 class Examples:
-    def __init__(self, path=None, data=None, nway=None, provenance=None):
+    def __init__(self, path=None, data=None, nway=None, provenance=None, shuffle=False):
         self.__provenance = provenance or path or Provenance()
         self.nway = nway
         self.path = path
+        self.shuffle = shuffle
         self.data = data or self._load_file(path)
 
     def provenance(self):
@@ -25,10 +29,13 @@ class Examples:
         examples = []
 
         with open(path) as f:
-            for line in f:
+            for line in tqdm(f, desc=f"Loading Triples:"):
                 example = ujson.loads(line)[:nway]
                 examples.append(example)
-
+        
+        if self.shuffle:
+            random.Random(42).shuffle(examples)
+        
         return examples
 
     def tolist(self, rank=None, nranks=None):
@@ -41,7 +48,7 @@ class Examples:
 
         if rank or nranks:
             assert rank in range(nranks), (rank, nranks)
-            return [self.data[idx] for idx in range(0, len(self.data), nranks)]  # if line_idx % nranks == rank
+            return [self.data[idx + rank] for idx in trange(0, len(self.data), nranks) if idx + rank < len(self.data)]  # if line_idx % nranks == rank
 
         return list(self.data)
 
@@ -68,12 +75,12 @@ class Examples:
         return output_path
 
     @classmethod
-    def cast(cls, obj, nway=None):
+    def cast(cls, obj, nway=None, shuffle=False):
         if type(obj) is str:
-            return cls(path=obj, nway=nway)
+            return cls(path=obj, nway=nway, shuffle=shuffle)
 
         if isinstance(obj, list):
-            return cls(data=obj, nway=nway)
+            return cls(data=obj, nway=nway, shuffle=shuffle)
 
         if type(obj) is cls:
             assert nway is None, nway

@@ -160,6 +160,8 @@ class TrainingSettings:
 
     hyperbolic_maxnorm: float = DefaultVal(None)
 
+    shuffle_triples: bool = DefaultVal(False)
+
 
 @dataclass
 class IndexingSettings:

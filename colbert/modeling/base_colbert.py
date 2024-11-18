@@ -30,8 +30,16 @@ class BaseColBERT(torch.nn.Module):
         HF_ColBERT = class_factory(self.name)
         
         self.model = HF_ColBERT.from_pretrained(name_or_path, colbert_config=self.colbert_config)
+        
+        # freeze the model
+        for param in self.model.parameters():
+            param.requires_grad = False
+
         self.projection = PoincareProjection(colbert_config.dim, colbert_config.projection_dim)
-        self.projection = self.projection.load_pretrained(name_or_path)
+        try:
+            self.projection = self.projection.load_pretrained(name_or_path)
+        except FileNotFoundError as e:
+            print(f"Could not load projection from {name_or_path}. Initializing from scratch.")
 
         self.model.to(DEVICE)
         self.projection = self.projection.to(DEVICE)

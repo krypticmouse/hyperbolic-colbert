@@ -15,7 +15,7 @@ from colbert.data.examples import Examples
 
 
 class LazyBatcher():
-    def __init__(self, config: ColBERTConfig, triples, queries, collection, rank=0, nranks=1):
+    def __init__(self, config: ColBERTConfig, triples, queries, collection, rank=0, nranks=1, shuffle_triples=False):
         self.bsize, self.accumsteps = config.bsize, config.accumsteps
         self.nway = config.nway
 
@@ -24,7 +24,7 @@ class LazyBatcher():
         self.tensorize_triples = partial(tensorize_triples, self.query_tokenizer, self.doc_tokenizer)
         self.position = 0
 
-        self.triples = Examples.cast(triples, nway=self.nway).tolist(rank, nranks)
+        self.triples = Examples.cast(triples, nway=self.nway, shuffle=shuffle_triples).tolist(rank, nranks)
         self.queries = Queries.cast(queries)
         self.collection = Collection.cast(collection)
         assert len(self.triples) > 0, "Received no triples on which to train."

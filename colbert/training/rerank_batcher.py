@@ -14,7 +14,7 @@ from colbert.data.examples import Examples
 
 
 class RerankBatcher():
-    def __init__(self, config: ColBERTConfig, triples, queries, collection, rank=0, nranks=1):
+    def __init__(self, config: ColBERTConfig, triples, queries, collection, rank=0, nranks=1, shuffle_triples=False):
         self.bsize, self.accumsteps = config.bsize, config.accumsteps
         self.nway = config.nway
         
@@ -23,7 +23,7 @@ class RerankBatcher():
         self.tokenizer = RerankerTokenizer(total_maxlen=config.doc_maxlen, base=config.checkpoint)
         self.position = 0
 
-        self.triples = Examples.cast(triples, nway=self.nway).tolist(rank, nranks)
+        self.triples = Examples.cast(triples, nway=self.nway, shuffle=shuffle_triples).tolist(rank, nranks)
         self.queries = Queries.cast(queries)
         self.collection = Collection.cast(collection)
 

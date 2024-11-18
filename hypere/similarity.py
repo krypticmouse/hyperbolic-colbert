@@ -3,17 +3,31 @@ from torch.linalg import norm
 
 
 def hyperbolic_distance(u, v, max_norm=None):
-    numerator = 2 * norm(u - v, dim=-1) ** 2
-    denominator = (1 - norm(u, dim=-1) ** 2) * (1 - norm(v, dim=-1) ** 2)
+    """
+    Computes the pairwise hyperbolic distances between two sets of vectors.
 
-    # Add a small epsilon to avoid division by zero
+    u: Tensor of shape [batch_size, Q, dim]
+    v: Tensor of shape [batch_size, D, dim]
+    Returns: Tensor of shape [batch_size, Q, D]
+    """
+    # Expand tensors to enable pairwise subtraction
+    u_expanded = u.unsqueeze(2)  # [batch_size, Q, 1, dim]
+    v_expanded = v.unsqueeze(1)  # [batch_size, 1, D, dim]
+
+    diff = u_expanded - v_expanded  # [batch_size, Q, D, dim]
+    numerator = 2 * norm(diff, dim=-1) ** 2  # [batch_size, Q, D]
+
+    norm_u = norm(u, dim=-1)  # [batch_size, Q]
+    norm_v = norm(v, dim=-1)  # [batch_size, D]
+
+    denominator = (1 - norm_u.unsqueeze(2) ** 2) * (1 - norm_v.unsqueeze(1) ** 2)  # [batch_size, Q, D]
     epsilon = 1e-8
     denominator = torch.clamp(denominator, min=epsilon)
 
-    # Ensure the argument to acosh is >= 1
     acosh_arg = torch.clamp(1 + (numerator / denominator), min=1.0 + epsilon)
+    distance = torch.acosh(acosh_arg) / (max_norm or 1.0)  # [batch_size, Q, D]
 
-    return torch.acosh(acosh_arg) / (max_norm or 1.0)
+    return distance
 
 
 def euclidean_distance(u, v):

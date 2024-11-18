@@ -2,9 +2,6 @@ import torch
 
 from hypere.similarity import hyperbolic_distance
 
-
-MAX_GAMMA_DISTANCE = hyperbolic_distance(torch.tensor([0, 1-(1e-8)]), torch.tensor([0, (1e-8)-1]))
-
 class HyperbolicContrastiveLoss(torch.nn.Module):
     def __init__(self, margin=0.8, similarity_fn=hyperbolic_distance):
         super().__init__()

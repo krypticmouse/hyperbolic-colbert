@@ -68,7 +68,23 @@ class ColBERT(BaseColBERT):
     def compute_ib_loss(self, Q, D, D_mask):
         # TODO: Organize the code below! Quite messy.
         if self.colbert_config.similarity == 'hyperbolic':
-            return hyperbolic_distance(Q.unsqueeze(1), D.unsqueeze(0), max_norm=self.colbert_config.hyperbolic_maxnorm).flatten(0, 1)
+            print("Using hyperbolic distance for IB loss.", Q.size(), D.size())
+            print("Matrix Multiplication Sizes: ", (D.unsqueeze(0) @ Q.permute(0, 2, 1).unsqueeze(1)).flatten(0, 1).size())
+            
+            # Expand dimensions exactly like in colbert_score
+            Q_expanded = Q.permute(0, 2, 1).unsqueeze(1)  # [4, 1, 32, 16]
+            D_expanded = D.unsqueeze(0)  # [1, 8, 107, 16]
+            
+            # Compute hyperbolic distance
+            scores = -1.0 * hyperbolic_distance(
+                Q_expanded,  # [4, 1, 32, 16]
+                D_expanded,  # [1, 8, 107, 16]
+                max_norm=self.colbert_config.hyperbolic_maxnorm
+            )
+            
+            # Flatten first two dimensions (batch_q, batch_d)
+            scores = scores.flatten(0, 1)  # Should give [32, 107, 32]
+            print("Matrix Multiplication Result Size: ", scores.size())
         else:
             scores = (D.unsqueeze(0) @ Q.permute(0, 2, 1).unsqueeze(1)).flatten(0, 1)  # query-major unsqueeze
 
@@ -179,7 +195,11 @@ def colbert_score(Q, D_padded, D_mask, config=ColBERTConfig()):
     assert Q.size(0) in [1, D_padded.size(0)]
 
     if config.similarity == "hyperbolic":
-        scores = hyperbolic_distance(Q.to(dtype=D_padded.dtype), D_padded, max_norm=config.hyperbolic_maxnorm)
+        # Remove permutation to keep [8, 32, 16] shape
+        scores = -1.0 * hyperbolic_distance(Q.to(dtype=D_padded.dtype), D_padded, max_norm=config.hyperbolic_maxnorm)
+        
+        # Transpose to get [8, 133, 32]
+        scores = scores.transpose(1, 2)  # Now scores.shape = [8, 133, 32]
     else:
         scores = D_padded @ Q.to(dtype=D_padded.dtype).permute(0, 2, 1)
 
@@ -202,7 +222,7 @@ def colbert_score_packed(Q, D_packed, D_lengths, config=ColBERTConfig()):
     assert D_packed.dim() == 2, D_packed.size()
 
     if config.similarity == "hyperbolic":
-        scores = hyperbolic_distance(Q.to(dtype=D_packed.dtype), D_packed, max_norm=config.hyperbolic_maxnorm)
+        scores = torch.Tensor(-1).to(dtype=D_packed.dtype) * hyperbolic_distance(Q.to(dtype=D_packed.dtype), D_packed, max_norm=config.hyperbolic_maxnorm)
     else:
         scores = D_packed @ Q.to(dtype=D_packed.dtype).T
 
